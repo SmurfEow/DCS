@@ -5,7 +5,7 @@
 package Server;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.Naming;
-import Common.RemoteTesting;
+import Common.Authorization;
 
 public class ServerSocket {
     public static void main(String[] args) throws Exception {
@@ -16,9 +16,9 @@ public class ServerSocket {
 
         LocateRegistry.createRegistry(1099);
 
-        RemoteTesting service = new ServiceImpl();
+        Authorization service = new ServiceImpl();
 
-        Naming.rebind("rmi://" + serverIP + ":1099/RemoteTesting", service);
+        Naming.rebind("rmi://" + serverIP + ":1099/Authorization", service);
 
         System.out.println("Server started at " + serverIP + ":1099");
     }

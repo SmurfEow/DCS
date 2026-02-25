@@ -9,25 +9,25 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ConcurrentSession {
 
-    public static class Cred {
+    public static class cred {
         public final String salt;
         public final String hash;
         public final UserRole role;
 
-        public Cred(String salt, String hash, UserRole role) {
+        public cred(String salt, String hash, UserRole role) {
             this.salt = salt;
             this.hash = hash;
             this.role = role;
         }
     }
 
-    private final ConcurrentHashMap<String, Cred> map = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, cred> map = new ConcurrentHashMap<>();
 
-    public void put(String userId, Cred credential) {
+    public void put(String userId, cred credential) {
         map.put(userId, credential);
     }
 
-    public Cred get(String userId) {
+    public cred get(String userId) {
         return map.get(userId);
     }
 

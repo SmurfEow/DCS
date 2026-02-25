@@ -2,6 +2,10 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
+//git remote add origin https://github.com/SmurfEow/DCS.git
+//git branch -M main
+//git push -u origin main
+
 package Client;
 
 import Common.Authorization;
