@@ -15,6 +15,8 @@ public class ServerSocket {
         System.setProperty("java.rmi.server.hostname", serverIP);
 
         LocateRegistry.createRegistry(1099);
+        
+        Database.init();
 
         Authorization service = new ServiceImpl();
 

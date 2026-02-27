@@ -14,8 +14,11 @@ public class Employee implements Serializable {
     private String icPassport;
     
     private String phoneNo;
-    private String emergencyNo;
-    private String email;
+    
+    private String emergencyName;
+    private String emergencyPhoneNo;
+    private String emergencyRelationship;
+
     
     private int leaveBalance =15;
     
@@ -42,11 +45,14 @@ public class Employee implements Serializable {
     public String getPhoneNo(){
         return phoneNo;
     }
-    public String getEmergencyNo(){
-        return emergencyNo;
+    public String getEmergencyName(){
+        return emergencyName;
     }
-    public String getEmail(){
-        return email;
+    public String getEmergencyNo(){
+        return emergencyPhoneNo;
+    }
+    public String getEmergencyRelationship(){
+        return emergencyRelationship;
     }
     public int getLeaveBalance(){
         return leaveBalance;
@@ -67,11 +73,14 @@ public class Employee implements Serializable {
     public void setPhoneNo(String phoneNo){
         this.phoneNo = phoneNo;
     }
-    public void setEmergencyNo(String emergencyNo){
-        this.emergencyNo = emergencyNo;
+    public void setEmergencyName(String emergencyName){
+        this.emergencyName = emergencyName;
     }
-    public void setEmail(String email){
-        this.email = email;
+    public void setEmergencyPhoneNo(String emergencyPhoneNo){
+        this.emergencyPhoneNo = emergencyPhoneNo;
+    }
+    public void setEmergencyRelationship(String emergencyRelationship){
+        this.emergencyRelationship = emergencyRelationship;
     }
     public void setLeaveBalance(int leaveBalance){
         this.leaveBalance = leaveBalance;
