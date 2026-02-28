@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package Common;
 
 import java.rmi.Remote;
@@ -21,5 +17,26 @@ public interface Authorization extends Remote {
     // Staff
     Employee updateDetails(UserSession session, Employee updated) throws RemoteException;
     int leaveBalance(UserSession session) throws RemoteException;
-}
+    Employee getMyProfile(UserSession session) throws RemoteException;
 
+    // =========================
+    // LEAVE (STAFF)
+    // =========================
+    int applyLeave(UserSession session,
+                   String leaveType,
+                   String startDateYYYYMMDD,
+                   String endDateYYYYMMDD,
+                   String reason) throws RemoteException;
+
+    String viewMyLeaveApplications(UserSession session) throws RemoteException;  // includes pending
+    String viewMyLeaveHistory(UserSession session) throws RemoteException;       // approved/rejected only
+
+    // =========================
+    // LEAVE (HR)
+    // =========================
+    String viewPendingLeaveApplications(UserSession session) throws RemoteException;
+
+    void decideLeave(UserSession session,
+                     int leaveId,
+                     boolean approve) throws RemoteException;
+}

@@ -10,7 +10,7 @@ import java.util.Scanner;
 
 public class ClientMain {
 
-    private static final String SERVER_IP = "192.168.1.5";
+    private static final String SERVER_IP = "192.168.1.19";
     private static final String URL = "rmi://" + SERVER_IP + ":1099/Authorization";
 
     public static void main(String[] args) {
@@ -117,26 +117,52 @@ public class ClientMain {
             try {
                 switch (choice) {
                     case "1":
-                        // Build updated details object for server to apply
+                        Employee profile = service.getMyProfile(session);
+                        while(true){
+                            System.out.println("\n=== UPDATE DETAILS ===");
+                            System.out.println("1. Phone                        :" + nullSafe(profile.getPhoneNo()));
+                            System.out.println("2. Emergency Family name        :" + nullSafe(profile.getPhoneNo()));
+                            System.out.println("3. Emergency Contact            :" + nullSafe(profile.getPhoneNo()));
+                            System.out.println("4. Emergenc Relationship        :" + nullSafe(profile.getPhoneNo()));
+                            System.out.println("5. Save & Exit                  :");
+                            System.out.println("Select a field to edit:         :");
+                            String pick = sc.nextLine().trim();
+                            
+                            if (pick.equals("5")) break;
+                            
+                            switch(pick){
+                                case "1":
+                                    System.out.println("New Phone: ");
+                                    profile.setPhoneNo(sc.nextLine().trim());
+                                    break;
+                                case "2":
+                                    System.out.println("New Emergency Family: ");
+                                    profile.setEmergencyName(sc.nextLine().trim());
+                                    break;
+                                case "3":
+                                    System.out.println("New Emergency No: ");
+                                    profile.setEmergencyPhoneNo(sc.nextLine().trim());
+                                    break;
+                                case "4":
+                                    System.out.println("New Emergency Relationship: ");
+                                    profile.setEmergencyRelationship(sc.nextLine().trim());
+                                    break;
+                                default:
+                                    System.out.println("Invalid option");
+                            }
+                        }
                         Employee updated = new Employee();
                         updated.setEmployeeId(session.getUserId());
-
-                        System.out.print("Phone (Employee): ");
-                        updated.setPhoneNo(sc.nextLine().trim());
-
-                        System.out.print("Emergency Name: ");
-                        updated.setEmergencyName(sc.nextLine().trim());
-
-                        System.out.print("Emergency Contact No: ");
-                        updated.setEmergencyPhoneNo(sc.nextLine().trim()); // ✅ correct setter
-
-                        System.out.print("Emergency Relationship: ");
-                        updated.setEmergencyRelationship(sc.nextLine().trim());
-
+                        updated.setPhoneNo(profile.getPhoneNo());
+                        updated.setEmergencyName(profile.getEmergencyName());
+                        updated.setEmergencyPhoneNo(profile.getEmergencyNo());
+                        updated.setEmergencyRelationship(profile.getEmergencyRelationship());
+                        
                         service.updateDetails(session, updated);
-                        System.out.println("✅ Details updated.");
+                        System.out.println("Details updated successfully!");
                         break;
-
+                        
+                       
                     case "2":
                         int bal = service.leaveBalance(session);
                         System.out.println("Leave balance: " + bal + " day(s)");
@@ -171,6 +197,9 @@ public class ClientMain {
         if (msg == null) return false;
         msg = msg.toLowerCase();
         return msg.contains("expired") || msg.contains("invalid");
+    }
+    private static String nullSafe(String s){
+        return s == null || s.isBlank() ? "-" : s;
     }
 }
     

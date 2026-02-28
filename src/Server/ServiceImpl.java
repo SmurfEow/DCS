@@ -4,6 +4,9 @@ import Common.Authorization;
 import Common.Employee;
 import Common.UserRole;
 import Common.UserSession;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -18,7 +21,7 @@ public class ServiceImpl extends UnicastRemoteObject implements Authorization {
     private final EmployeesRepository employees = new EmployeesRepository();
     private final EmployeeDetailsRepository details = new EmployeeDetailsRepository();
     private final LeaveBalanceRepository leaveBalanceRepo = new LeaveBalanceRepository();
-
+    private final LeaveApplicationsRepository leaveRepo = new LeaveApplicationsRepository();
     protected ServiceImpl() throws RemoteException {
         super();
 
@@ -151,4 +154,170 @@ public class ServiceImpl extends UnicastRemoteObject implements Authorization {
             throw new RemoteException("DB error during leaveBalance", e);
         }
     }
+    
+    @Override
+    public Employee getMyProfile(UserSession session) throws RemoteException {
+        UserSession s = sessionManager.require(session);
+        if (s.getRole() != UserRole.STAFF) throw new SecurityException("Staff only");
+
+        try {
+            Employee basic = employees.findBasic(s.getUserId());
+            if (basic == null) throw new IllegalStateException("Employee not found");
+
+            // fetch details row
+            EmployeeDetailsRepository.DetailsRow d = details.find(s.getUserId());
+            if (d != null) {
+                basic.setPhoneNo(d.phone);
+                basic.setEmergencyName(d.emergencyName);
+                basic.setEmergencyPhoneNo(d.emergencyNo);
+                basic.setEmergencyRelationship(d.emergencyRelationship);
+            }
+            return basic;
+
+        } catch (Exception e) {
+            throw new RemoteException("DB error during getMyProfile", e);
+        }
+    }
+    
+    @Override
+    public int applyLeave(UserSession session, String leaveType, String startDateYYYYMMDD, String endDateYYYYMMDD, String reason)
+            throws RemoteException {
+
+        UserSession s = sessionManager.require(session);
+        if (s.getRole() != UserRole.STAFF) throw new SecurityException("Staff only");
+
+        try {
+            if (leaveType == null || leaveType.isBlank()) throw new IllegalArgumentException("Leave type required");
+            LocalDate start = LocalDate.parse(startDateYYYYMMDD.trim());
+            LocalDate end = LocalDate.parse(endDateYYYYMMDD.trim());
+            if (end.isBefore(start)) throw new IllegalArgumentException("End date must be >= start date");
+
+            int daysRequested = (int) ChronoUnit.DAYS.between(start, end) + 1; // inclusive
+            if (daysRequested <= 0) throw new IllegalArgumentException("Invalid day count");
+
+            int year = Year.now().getValue();
+            int bal = leaveBalanceRepo.getYearBalanceOrCreate(s.getUserId(), year, 15);
+
+            if (daysRequested > bal) {
+                throw new IllegalStateException("Not enough leave balance. Balance=" + bal + ", requested=" + daysRequested);
+            }
+
+            int leaveId = leaveRepo.insertApplication(s.getUserId(), leaveType.trim(), start, end, daysRequested, reason);
+            audit.log("applyLeave: emp=" + s.getUserId() + " leaveId=" + leaveId + " days=" + daysRequested);
+            return leaveId;
+
+        } catch (Exception e) {
+            throw new RemoteException("DB error during applyLeave", e);
+        }
+    }
+
+    @Override
+    public String viewMyLeaveApplications(UserSession session) throws RemoteException {
+        UserSession s = sessionManager.require(session);
+        if (s.getRole() != UserRole.STAFF) throw new SecurityException("Staff only");
+
+        try {
+            List<LeaveApplicationsRepository.LeaveRow> rows = leaveRepo.listByEmployee(s.getUserId());
+            if (rows.isEmpty()) return "No leave applications found.";
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("=== MY LEAVE APPLICATIONS ===\n");
+            for (var r : rows) {
+                sb.append("ID: ").append(r.leaveId)
+                  .append(" | ").append(r.leaveType)
+                  .append(" | ").append(r.startDate).append(" -> ").append(r.endDate)
+                  .append(" | Days: ").append(r.daysRequested)
+                  .append(" | Status: ").append(r.status)
+                  .append("\n");
+            }
+            return sb.toString();
+
+        } catch (Exception e) {
+            throw new RemoteException("DB error during viewMyLeaveApplications", e);
+        }
+    }
+
+    @Override
+    public String viewMyLeaveHistory(UserSession session) throws RemoteException {
+        UserSession s = sessionManager.require(session);
+        if (s.getRole() != UserRole.STAFF) throw new SecurityException("Staff only");
+
+        try {
+            List<LeaveApplicationsRepository.LeaveRow> rows = leaveRepo.listHistoryByEmployee(s.getUserId());
+            if (rows.isEmpty()) return "No leave history found.";
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("=== MY LEAVE HISTORY ===\n");
+            for (var r : rows) {
+                sb.append("ID: ").append(r.leaveId)
+                  .append(" | ").append(r.leaveType)
+                  .append(" | ").append(r.startDate).append(" -> ").append(r.endDate)
+                  .append(" | Days: ").append(r.daysRequested)
+                  .append(" | Status: ").append(r.status)
+                  .append(" | DecidedBy: ").append(r.decidedBy == null ? "-" : r.decidedBy)
+                  .append("\n");
+            }
+            return sb.toString();
+
+        } catch (Exception e) {
+            throw new RemoteException("DB error during viewMyLeaveHistory", e);
+        }
+    }
+
+    @Override
+    public String viewPendingLeaveApplications(UserSession session) throws RemoteException {
+        UserSession s = sessionManager.require(session);
+        if (s.getRole() != UserRole.HR) throw new SecurityException("HR only");
+
+        try {
+            List<LeaveApplicationsRepository.LeaveRow> rows = leaveRepo.listPending();
+            if (rows.isEmpty()) return "No pending leave applications.";
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("=== PENDING LEAVE APPLICATIONS ===\n");
+            for (var r : rows) {
+                sb.append("ID: ").append(r.leaveId)
+                  .append(" | EMP: ").append(r.employeeId)
+                  .append(" | ").append(r.leaveType)
+                  .append(" | ").append(r.startDate).append(" -> ").append(r.endDate)
+                  .append(" | Days: ").append(r.daysRequested)
+                  .append("\n");
+            }
+            return sb.toString();
+
+        } catch (Exception e) {
+            throw new RemoteException("DB error during viewPendingLeaveApplications", e);
+        }
+    }
+
+    @Override
+    public void decideLeave(UserSession session, int leaveId, boolean approve) throws RemoteException {
+        UserSession s = sessionManager.require(session);
+        if (s.getRole() != UserRole.HR) throw new SecurityException("HR only");
+
+        try {
+            var row = leaveRepo.findById(leaveId);
+            if (row == null) throw new IllegalArgumentException("Leave ID not found");
+            if (!"PENDING".equalsIgnoreCase(row.status)) throw new IllegalStateException("Leave is not pending");
+
+            if (approve) {
+                int year = Year.now().getValue();
+                int bal = leaveBalanceRepo.getYearBalanceOrCreate(row.employeeId, year, 15);
+                if (row.daysRequested > bal) {
+                    throw new IllegalStateException("Cannot approve: insufficient balance. Balance=" + bal);
+                }
+                // deduct
+                leaveBalanceRepo.setBalance(row.employeeId, year, bal - row.daysRequested);
+                leaveRepo.setDecision(leaveId, "APPROVED", s.getUserId());
+                audit.log("decideLeave APPROVED: leaveId=" + leaveId + " by=" + s.getUserId());
+            } else {
+                leaveRepo.setDecision(leaveId, "REJECTED", s.getUserId());
+                audit.log("decideLeave REJECTED: leaveId=" + leaveId + " by=" + s.getUserId());
+            }
+
+        } catch (Exception e) {
+            throw new RemoteException("DB error during decideLeave", e);
+        }
+    }
+    
 }

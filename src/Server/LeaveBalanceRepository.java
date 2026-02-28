@@ -5,7 +5,7 @@ import java.sql.*;
 public class LeaveBalanceRepository {
 
     public int getYearBalanceOrCreate(String employeeId, int year, int defaultBalance) throws SQLException {
-        String check = "SELECT BALANCE FROM LEAVE_BALANCE WHERE EMPLOYEE_ID = ? AND YEAR = ?";
+        String check = "SELECT BALANCE FROM LEAVE_BALANCE WHERE EMPLOYEE_ID = ? AND LEAVE_YEAR = ?";
 
         try (Connection c = DatabaseSocket.getConnection();
              PreparedStatement ps = c.prepareStatement(check)) {
@@ -19,7 +19,7 @@ public class LeaveBalanceRepository {
             }
         }
 
-        String insert = "INSERT INTO LEAVE_BALANCE (EMPLOYEE_ID, YEAR, BALANCE) VALUES (?, ?, ?)";
+        String insert = "INSERT INTO LEAVE_BALANCE (EMPLOYEE_ID, LEAVE_YEAR, BALANCE) VALUES (?, ?, ?)";
 
         try (Connection c = DatabaseSocket.getConnection();
              PreparedStatement ps = c.prepareStatement(insert)) {
@@ -35,7 +35,7 @@ public class LeaveBalanceRepository {
     }
 
     public void setBalance(String employeeId, int year, int newBalance) throws SQLException {
-        String sql = "UPDATE LEAVE_BALANCE SET BALANCE = ? WHERE EMPLOYEE_ID = ? AND YEAR = ?";
+        String sql = "UPDATE LEAVE_BALANCE SET BALANCE = ? WHERE EMPLOYEE_ID = ? AND LEAVE_YEAR = ?";
 
         try (Connection c = DatabaseSocket.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -49,7 +49,7 @@ public class LeaveBalanceRepository {
     }
 
     public boolean hasRow(String employeeId, int year) throws SQLException {
-        String sql = "SELECT 1 FROM LEAVE_BALANCE WHERE EMPLOYEE_ID = ? AND YEAR = ?";
+        String sql = "SELECT 1 FROM LEAVE_BALANCE WHERE EMPLOYEE_ID = ? AND LEAVE_YEAR = ?";
         try (Connection c = DatabaseSocket.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, employeeId);

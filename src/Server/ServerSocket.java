@@ -10,7 +10,7 @@ import Common.Authorization;
 public class ServerSocket {
     public static void main(String[] args) throws Exception {
 
-        String serverIP = "192.168.1.5"; // <-- server laptop IP
+        String serverIP = "192.168.1.19"; // <-- server laptop IP
 
         System.setProperty("java.rmi.server.hostname", serverIP);
 

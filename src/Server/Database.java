@@ -49,9 +49,9 @@ public class Database {
                 st.executeUpdate(
                     "CREATE TABLE LEAVE_BALANCE (" +
                     "EMPLOYEE_ID VARCHAR(20), " +
-                    "YEAR INT, " +
+                    "LEAVE_YEAR INT, " +
                     "BALANCE INT NOT NULL, " +
-                    "PRIMARY KEY (EMPLOYEE_ID, YEAR), " +
+                    "PRIMARY KEY (EMPLOYEE_ID, LEAVE_YEAR), " +
                     "FOREIGN KEY (EMPLOYEE_ID) REFERENCES EMPLOYEES(EMPLOYEE_ID))"
                 );
             } catch (Exception ignored) {}
