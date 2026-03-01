@@ -136,4 +136,31 @@ public class LeaveApplicationsRepository {
         r.decidedAt = rs.getTimestamp("DECIDED_AT");
         return r;
     }
+    
+    public List<LeaveRow> listApprovedByEmployeeAndYear(String employeeId, int year) throws SQLException {
+
+    Date from = Date.valueOf(LocalDate.of(year, 1, 1));
+    Date to   = Date.valueOf(LocalDate.of(year, 12, 31));
+
+    String sql =
+            "SELECT * FROM LEAVE_APPLICATIONS " +
+            "WHERE EMPLOYEE_ID = ? " +
+            "AND STATUS = 'APPROVED' " +
+            "AND START_DATE >= ? AND START_DATE <= ? " +
+            "ORDER BY START_DATE ASC";
+
+    try (Connection c = DatabaseSocket.getConnection();
+         PreparedStatement ps = c.prepareStatement(sql)) {
+
+        ps.setString(1, employeeId);
+        ps.setDate(2, from);
+        ps.setDate(3, to);
+
+        try (ResultSet rs = ps.executeQuery()) {
+            List<LeaveRow> out = new ArrayList<>();
+            while (rs.next()) out.add(map(rs));
+            return out;
+        }
+    }
+}
 }

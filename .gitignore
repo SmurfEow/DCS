@@ -1,0 +1,8 @@
+"C:\Program Files\Java\jdk-17\bin\keytool.exe" -genkeypair -alias crest-rmi -keyalg RSA -keysize 2048 -validity 365 -keystore server.keystore -storepass 888888 -keypass 888888 -dname "CN=crest-rmi, OU=APU, O=Crest, L=KL, S=Selangor, C=MY"
+
+this is for ssl in keytool.exe
+
+-Djavax.net.ssl.keyStore=server.keystore
+-Djavax.net.ssl.keyStorePassword=888888
+-Djavax.net.debug=ssl:handshake
+add this on RUN in project

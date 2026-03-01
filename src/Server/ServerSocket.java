@@ -4,24 +4,28 @@
  */
 package Server;
 import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import javax.rmi.ssl.SslRMIClientSocketFactory;
+import javax.rmi.ssl.SslRMIServerSocketFactory;
 import java.rmi.Naming;
-import Common.Authorization;
 
 public class ServerSocket {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
+        try {
+            // ✅ SSL registry
+            Registry reg = LocateRegistry.createRegistry(
+                1099,
+                new SslRMIClientSocketFactory(),
+                new SslRMIServerSocketFactory()
+            );
 
-        String serverIP = "192.168.1.19"; // <-- server laptop IP
+            // ✅ bind service (ServiceImpl must also be SSL-exported, see next section)
+            ServiceImpl svc = new ServiceImpl();
+            Naming.rebind("rmi://0.0.0.0:1099/Authorization", svc);
 
-        System.setProperty("java.rmi.server.hostname", serverIP);
-
-        LocateRegistry.createRegistry(1099);
-        
-        Database.init();
-
-        Authorization service = new ServiceImpl();
-
-        Naming.rebind("rmi://" + serverIP + ":1099/Authorization", service);
-
-        System.out.println("Server started at " + serverIP + ":1099");
+            System.out.println("✅ SSL-RMI Server started on port 1099");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

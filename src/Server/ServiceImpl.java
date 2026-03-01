@@ -12,6 +12,10 @@ import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.time.Year;
 
+import javax.rmi.ssl.SslRMIClientSocketFactory;
+import javax.rmi.ssl.SslRMIServerSocketFactory;
+
+
 public class ServiceImpl extends UnicastRemoteObject implements Authorization {
 
     private final Session sessionManager = new Session();
@@ -22,8 +26,9 @@ public class ServiceImpl extends UnicastRemoteObject implements Authorization {
     private final EmployeeDetailsRepository details = new EmployeeDetailsRepository();
     private final LeaveBalanceRepository leaveBalanceRepo = new LeaveBalanceRepository();
     private final LeaveApplicationsRepository leaveRepo = new LeaveApplicationsRepository();
+    
     protected ServiceImpl() throws RemoteException {
-        super();
+        super(0, new SslRMIClientSocketFactory(), new SslRMIServerSocketFactory());
 
         // Create default HR only ONCE
         try {
@@ -180,34 +185,85 @@ public class ServiceImpl extends UnicastRemoteObject implements Authorization {
     }
     
     @Override
-    public int applyLeave(UserSession session, String leaveType, String startDateYYYYMMDD, String endDateYYYYMMDD, String reason)
+    public int applyLeave(UserSession session,
+                          String leaveType,
+                          String startDateYYYYMMDD,
+                          String endDateYYYYMMDD,
+                          String reason)
             throws RemoteException {
 
         UserSession s = sessionManager.require(session);
-        if (s.getRole() != UserRole.STAFF) throw new SecurityException("Staff only");
+        if (s.getRole() != UserRole.STAFF)
+            throw new SecurityException("Staff only");
 
         try {
-            if (leaveType == null || leaveType.isBlank()) throw new IllegalArgumentException("Leave type required");
-            LocalDate start = LocalDate.parse(startDateYYYYMMDD.trim());
-            LocalDate end = LocalDate.parse(endDateYYYYMMDD.trim());
-            if (end.isBefore(start)) throw new IllegalArgumentException("End date must be >= start date");
 
-            int daysRequested = (int) ChronoUnit.DAYS.between(start, end) + 1; // inclusive
-            if (daysRequested <= 0) throw new IllegalArgumentException("Invalid day count");
+            if (leaveType == null || leaveType.isBlank())
+                throw new IllegalArgumentException("Leave type is required");
 
+            if (reason == null || reason.isBlank())
+                throw new IllegalArgumentException("Reason is required");
+
+        
+            LocalDate start;
+            LocalDate end;
+
+            try {
+                start = LocalDate.parse(startDateYYYYMMDD.trim());
+                end = LocalDate.parse(endDateYYYYMMDD.trim());
+            } catch (Exception ex) {
+                throw new IllegalArgumentException("Invalid date format. Use YYYY-MM-DD.");
+            }
+
+            LocalDate today = LocalDate.now();
+
+
+            if (start.isBefore(today))
+                throw new IllegalArgumentException("Start date cannot be in the past.");
+
+            if (end.isBefore(today))
+                throw new IllegalArgumentException("End date cannot be in the past.");
+
+ 
+            if (end.isBefore(start))
+                throw new IllegalArgumentException("End date must be after or same as start date.");
+
+   
+            int daysRequested = (int) (java.time.temporal.ChronoUnit.DAYS.between(start, end)) + 1;
+
+            if (daysRequested <= 0)
+                throw new IllegalArgumentException("Invalid leave duration.");
+
+            if (daysRequested > 60)   
+                throw new IllegalArgumentException("Leave duration too long.");
+
+    
             int year = Year.now().getValue();
             int bal = leaveBalanceRepo.getYearBalanceOrCreate(s.getUserId(), year, 15);
 
-            if (daysRequested > bal) {
-                throw new IllegalStateException("Not enough leave balance. Balance=" + bal + ", requested=" + daysRequested);
+            if (leaveType.equalsIgnoreCase("ANNUAL")) {
+                if (daysRequested > bal)
+                    throw new IllegalStateException(
+                            "Not enough leave balance. Balance=" + bal + ", requested=" + daysRequested);
             }
 
-            int leaveId = leaveRepo.insertApplication(s.getUserId(), leaveType.trim(), start, end, daysRequested, reason);
-            audit.log("applyLeave: emp=" + s.getUserId() + " leaveId=" + leaveId + " days=" + daysRequested);
+            int leaveId = leaveRepo.insertApplication(
+                    s.getUserId(),
+                    leaveType.toUpperCase(),
+                    start,
+                    end,
+                    daysRequested,
+                    reason
+            );
+
+            audit.log("applyLeave: emp=" + s.getUserId()
+                    + " leaveId=" + leaveId
+                    + " days=" + daysRequested);
+
             return leaveId;
 
         } catch (Exception e) {
-            throw new RemoteException("DB error during applyLeave", e);
+            throw new RemoteException("Error during applyLeave", e);
         }
     }
 
@@ -317,6 +373,60 @@ public class ServiceImpl extends UnicastRemoteObject implements Authorization {
 
         } catch (Exception e) {
             throw new RemoteException("DB error during decideLeave", e);
+        }
+    }
+    
+    @Override
+    public String generateYearlyLeaveReport(UserSession session, String employeeId, int year) throws RemoteException {
+        UserSession s = sessionManager.require(session);
+        if (s.getRole() != UserRole.HR) throw new SecurityException("HR only");
+
+        try {
+            if (employeeId == null || employeeId.isBlank())
+                throw new IllegalArgumentException("Employee ID is required");
+
+            if (year < 2000 || year > 2100)
+                throw new IllegalArgumentException("Invalid year");
+
+            // Ensure employee exists
+            Employee basic = employees.findBasic(employeeId.trim());
+            if (basic == null) return "Employee not found: " + employeeId;
+
+            var approved = leaveRepo.listApprovedByEmployeeAndYear(employeeId.trim(), year);
+
+            int totalApprovedDays = 0;
+            for (var r : approved) totalApprovedDays += r.daysRequested;
+
+            int balance = leaveBalanceRepo.getYearBalanceOrCreate(employeeId.trim(), year, 15);
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("\n==== YEARLY LEAVE REPORT ====\n");
+            sb.append("Employee ID : ").append(employeeId).append("\n");
+            sb.append("Name        : ").append(basic.getFirstName()).append(" ").append(basic.getLastName()).append("\n");
+            sb.append("Year        : ").append(year).append("\n");
+            sb.append("-----------------------------------------\n");
+
+            if (approved.isEmpty()) {
+                sb.append("No APPROVED leave records for this year.\n");
+            } else {
+                for (var r : approved) {
+                    sb.append("LeaveID: ").append(r.leaveId)
+                      .append(" | ").append(r.leaveType)
+                      .append(" | ").append(r.startDate).append(" → ").append(r.endDate)
+                      .append(" | Days: ").append(r.daysRequested)
+                      .append("\n");
+                }
+            }
+
+            sb.append("-----------------------------------------\n");
+            sb.append("Total Approved Days : ").append(totalApprovedDays).append("\n");
+            sb.append("Remaining Balance   : ").append(balance).append("\n");
+
+            audit.log("HR " + s.getUserId() + " generated yearly report for " + employeeId + " year=" + year);
+            return sb.toString();
+
+        } catch (Exception e) {
+            throw new RemoteException("DB error during generateYearlyLeaveReport", e);
         }
     }
     
