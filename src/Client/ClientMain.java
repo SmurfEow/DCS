@@ -30,8 +30,8 @@ public class ClientMain {
             System.setProperty("javax.net.ssl.trustStorePassword", TRUSTSTORE_PASS);
             System.setProperty("javax.net.ssl.trustStoreType", "PKCS12");
 
-            // Optional but sometimes helps in mixed environments
-            System.setProperty("javax.net.ssl.keyStoreType", "PKCS12");
+            System.clearProperty("javax.net.ssl.keyStore");
+            System.clearProperty("javax.net.ssl.keyStorePassword");
 
             // Optional (for report proof). Uncomment to screenshot TLS handshake logs:
             // System.setProperty("javax.net.debug", "ssl,handshake");
