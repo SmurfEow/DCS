@@ -16,22 +16,35 @@ public class ClientMain {
     private static final String SERVER_IP = "192.168.1.19";
     private static final int SERVER_PORT = 1099;
 
-    // ✅ CHANGE THIS PATH ON PC B if your truststore is elsewhere
+    // ✅ PC B truststore location (confirmed by keytool -list)
     private static final String TRUSTSTORE_PATH =
-            "C:\\Users\\User\\Documents\\NetBeansProjects\\Crest\\client-truststore.p12";
+            "C:\\Users\\tiram\\OneDrive\\Desktop\\DCS\\client-truststore.p12";
     private static final String TRUSTSTORE_PASS = "888888";
 
     public static void main(String[] args) {
         try {
             // ------------------------------------------------------------
-            // 1) Force client truststore (PC B must trust PC A certificate)
+            // 1) Force client truststore (PC B trusts PC A certificate)
             // ------------------------------------------------------------
             System.setProperty("javax.net.ssl.trustStore", TRUSTSTORE_PATH);
             System.setProperty("javax.net.ssl.trustStorePassword", TRUSTSTORE_PASS);
             System.setProperty("javax.net.ssl.trustStoreType", "PKCS12");
 
+            // Optional but sometimes helps in mixed environments
+            System.setProperty("javax.net.ssl.keyStoreType", "PKCS12");
+
             // Optional (for report proof). Uncomment to screenshot TLS handshake logs:
             // System.setProperty("javax.net.debug", "ssl,handshake");
+
+            // ------------------------------------------------------------
+            // ✅ DEBUG: prove what NetBeans/Java is actually using at runtime
+            // ------------------------------------------------------------
+            String ts = System.getProperty("javax.net.ssl.trustStore");
+            System.out.println("java.version=" + System.getProperty("java.version"));
+            System.out.println("java.home=" + System.getProperty("java.home"));
+            System.out.println("user.dir=" + System.getProperty("user.dir"));
+            System.out.println("trustStore=" + ts);
+            System.out.println("trustStoreExists=" + new java.io.File(ts).exists());
 
             // ------------------------------------------------------------
             // 2) SSL RMI registry connection (IMPORTANT: no Naming.lookup)
@@ -126,7 +139,6 @@ public class ClientMain {
                     }
 
                     case "3": {
-                        // Show pending first (nice UX)
                         String pending = service.viewPendingLeaveApplications(session);
                         System.out.println(pending);
 
@@ -256,7 +268,7 @@ public class ClientMain {
                         updated.setEmployeeId(session.getUserId());
                         updated.setPhoneNo(profile.getPhoneNo());
                         updated.setEmergencyName(profile.getEmergencyName());
-                        updated.setEmergencyPhoneNo(profile.getEmergencyNo()); // OK (your getter name)
+                        updated.setEmergencyPhoneNo(profile.getEmergencyNo());
                         updated.setEmergencyRelationship(profile.getEmergencyRelationship());
 
                         service.updateDetails(session, updated);
@@ -271,7 +283,6 @@ public class ClientMain {
                     }
 
                     case "3": {
-                        // Apply Leave flow (loops until user cancels or submits once)
                         while (true) {
                             System.out.println("\nSelect Leave Type:");
                             System.out.println("1) Annual Leave");
@@ -291,13 +302,12 @@ public class ClientMain {
                                 case "4": type = "UNPAID"; break;
                                 case "5":
                                     System.out.println("Cancelled.");
-                                    return session; // back to staff menu
+                                    return session;
                                 default:
                                     System.out.println(" Invalid option.");
                                     continue;
                             }
 
-                            // Date input
                             System.out.print("Start Date (YYYY-MM-DD): ");
                             String start = sc.nextLine().trim();
 
@@ -307,7 +317,6 @@ public class ClientMain {
                             System.out.print("Reason: ");
                             String reason = sc.nextLine().trim();
 
-                            // Client-side validation
                             try {
                                 java.time.LocalDate sDate = java.time.LocalDate.parse(start);
                                 java.time.LocalDate eDate = java.time.LocalDate.parse(end);
@@ -335,12 +344,12 @@ public class ClientMain {
                                 String confirm = sc.nextLine().trim();
                                 if (!confirm.equalsIgnoreCase("Y")) {
                                     System.out.println("Submission cancelled.");
-                                    return session; // back to staff menu
+                                    return session;
                                 }
 
                                 int leaveId = service.applyLeave(session, type, start, end, reason);
                                 System.out.println(" Leave submitted. ID: " + leaveId + " (Status: PENDING)");
-                                return session; // submit once then back to staff menu
+                                return session;
 
                             } catch (Exception ex) {
                                 System.out.println(" Invalid date format. Use YYYY-MM-DD (example: 2026-03-10).");
