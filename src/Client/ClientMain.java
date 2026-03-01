@@ -5,17 +5,44 @@ import Common.Employee;
 import Common.UserRole;
 import Common.UserSession;
 
-import java.rmi.Naming;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import javax.rmi.ssl.SslRMIClientSocketFactory;
+
 import java.util.Scanner;
 
 public class ClientMain {
 
     private static final String SERVER_IP = "192.168.1.19";
-    private static final String URL = "rmi://" + SERVER_IP + ":1099/Authorization";
+    private static final int SERVER_PORT = 1099;
+
+    // ✅ CHANGE THIS PATH ON PC B if your truststore is elsewhere
+    private static final String TRUSTSTORE_PATH =
+            "C:\\Users\\User\\Documents\\NetBeansProjects\\Crest\\client-truststore.p12";
+    private static final String TRUSTSTORE_PASS = "888888";
 
     public static void main(String[] args) {
         try {
-            Authorization service = (Authorization) Naming.lookup(URL);
+            // ------------------------------------------------------------
+            // 1) Force client truststore (PC B must trust PC A certificate)
+            // ------------------------------------------------------------
+            System.setProperty("javax.net.ssl.trustStore", TRUSTSTORE_PATH);
+            System.setProperty("javax.net.ssl.trustStorePassword", TRUSTSTORE_PASS);
+            System.setProperty("javax.net.ssl.trustStoreType", "PKCS12");
+
+            // Optional (for report proof). Uncomment to screenshot TLS handshake logs:
+            // System.setProperty("javax.net.debug", "ssl,handshake");
+
+            // ------------------------------------------------------------
+            // 2) SSL RMI registry connection (IMPORTANT: no Naming.lookup)
+            // ------------------------------------------------------------
+            Registry reg = LocateRegistry.getRegistry(
+                    SERVER_IP,
+                    SERVER_PORT,
+                    new SslRMIClientSocketFactory()
+            );
+
+            Authorization service = (Authorization) reg.lookup("Authorization");
             System.out.println("Connected: " + service.ping());
 
             Scanner sc = new Scanner(System.in);
@@ -37,7 +64,8 @@ public class ClientMain {
             }
 
         } catch (Exception e) {
-            System.out.println("Failed to connect or run client: " + e.getMessage());
+            System.out.println("Failed to connect or run client: " + e);
+            e.printStackTrace();
         }
     }
 
@@ -133,6 +161,7 @@ public class ClientMain {
                         System.out.println(approve ? " Leave approved." : " Leave rejected.");
                         break;
                     }
+
                     case "4": {
                         System.out.print("Enter Employee ID: ");
                         String empId = sc.nextLine().trim();
@@ -265,7 +294,7 @@ public class ClientMain {
                                     return session; // back to staff menu
                                 default:
                                     System.out.println(" Invalid option.");
-                                    continue; 
+                                    continue;
                             }
 
                             // Date input
@@ -362,9 +391,8 @@ public class ClientMain {
         msg = msg.toLowerCase();
         return msg.contains("expired") || msg.contains("invalid");
     }
+
     private static String nullSafe(String s){
         return s == null || s.isBlank() ? "-" : s;
     }
 }
-    
-
