@@ -16,16 +16,14 @@ public class ClientMain {
     private static final String SERVER_IP = "192.168.1.19";
     private static final int SERVER_PORT = 1099;
 
-    // ✅ PC B truststore location (confirmed by keytool -list)
+
     private static final String TRUSTSTORE_PATH =
             "C:\\Users\\tiram\\OneDrive\\Desktop\\DCS\\client-truststore.p12";
     private static final String TRUSTSTORE_PASS = "888888";
 
     public static void main(String[] args) {
         try {
-            // ------------------------------------------------------------
-            // 1) Force client truststore (PC B trusts PC A certificate)
-            // ------------------------------------------------------------
+     
             System.setProperty("javax.net.ssl.trustStore", TRUSTSTORE_PATH);
             System.setProperty("javax.net.ssl.trustStorePassword", TRUSTSTORE_PASS);
             System.setProperty("javax.net.ssl.trustStoreType", "PKCS12");
@@ -33,11 +31,6 @@ public class ClientMain {
             System.clearProperty("javax.net.ssl.keyStore");
             System.clearProperty("javax.net.ssl.keyStorePassword");
 
-            // Optional (for report proof). Uncomment to screenshot TLS handshake logs:
-            // System.setProperty("javax.net.debug", "ssl,handshake");
-
-            // ------------------------------------------------------------
-            // ✅ DEBUG: prove what NetBeans/Java is actually using at runtime
             // ------------------------------------------------------------
             String ts = System.getProperty("javax.net.ssl.trustStore");
             System.out.println("java.version=" + System.getProperty("java.version"));
@@ -46,9 +39,6 @@ public class ClientMain {
             System.out.println("trustStore=" + ts);
             System.out.println("trustStoreExists=" + new java.io.File(ts).exists());
 
-            // ------------------------------------------------------------
-            // 2) SSL RMI registry connection (IMPORTANT: no Naming.lookup)
-            // ------------------------------------------------------------
             Registry reg = LocateRegistry.getRegistry(
                     SERVER_IP,
                     SERVER_PORT,

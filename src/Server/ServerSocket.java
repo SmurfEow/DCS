@@ -10,7 +10,7 @@ public class ServerSocket {
     private static final String SERVER_IP = "192.168.1.19";
     private static final int PORT = 1099;
 
-    // Keystore only needed when SSL=true
+
     private static final String KEYSTORE_PATH =
             "C:\\Users\\User\\Documents\\NetBeansProjects\\Crest\\server.keystore";
     private static final String KEYSTORE_PASS = "888888";
@@ -29,12 +29,12 @@ public class ServerSocket {
             Registry reg;
 
             if (SSL) {
-                // --- SSL ON ---
+
                 System.setProperty("javax.net.ssl.keyStore", KEYSTORE_PATH);
                 System.setProperty("javax.net.ssl.keyStorePassword", KEYSTORE_PASS);
                 System.setProperty("javax.net.ssl.keyStoreType", "PKCS12");
 
-                // No mutual TLS
+   
                 System.clearProperty("javax.net.ssl.trustStore");
                 System.clearProperty("javax.net.ssl.trustStorePassword");
 
@@ -44,7 +44,7 @@ public class ServerSocket {
 
                 System.out.println("keyStore=" + System.getProperty("javax.net.ssl.keyStore"));
             } else {
-                // --- SSL OFF ---
+   
                 System.clearProperty("javax.net.ssl.keyStore");
                 System.clearProperty("javax.net.ssl.keyStorePassword");
                 System.clearProperty("javax.net.ssl.keyStoreType");
@@ -54,9 +54,6 @@ public class ServerSocket {
                 reg = LocateRegistry.createRegistry(PORT);
             }
 
-            // IMPORTANT:
-            // If ServiceImpl extends UnicastRemoteObject and you used SSL super(...),
-            // you must also toggle ServiceImpl constructor to match SSL mode.
             ServiceImpl svc = new ServiceImpl();
 
             reg.rebind("Authorization", svc);

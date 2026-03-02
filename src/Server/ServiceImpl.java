@@ -93,26 +93,26 @@ public class ServiceImpl extends UnicastRemoteObject implements Authorization {
         if (s.getRole() != UserRole.HR) throw new SecurityException("HR only");
 
         try {
-            // generate employee ID (your existing generator)
+ 
             String empId = IdGenerator.nextEmployeeCounter();
 
-            // create employee record
+
             Employee e = new Employee(firstName, lastName, icPassport);
             e.setEmployeeId(empId);
 
-            employees.insertBasic(e);               // writes EMPLOYEES
-            details.createIfNotExists(empId);       // creates EMPLOYEE_DETAILS row (optional)
+            employees.insertBasic(e);               
+            details.createIfNotExists(empId);       
 
-            // create login
+
             String salt = PasswordHash.newSalt();
             String hash = PasswordHash.hash(salt, initPass);
             users.insert(empId, UserRole.STAFF, salt, hash);
 
-            // init leave balance for current year (LEAVE_BALANCE table)
+
             int year = Year.now().getValue();
             leaveBalanceRepo.getYearBalanceOrCreate(empId, year, 15);
 
-            audit.log("HR " + s.getUserId() + " registered " + empId); // ✅ fixed
+            audit.log("HR " + s.getUserId() + " registered " + empId); // 
             return e;
 
         } catch (Exception e) {
@@ -126,7 +126,7 @@ public class ServiceImpl extends UnicastRemoteObject implements Authorization {
         if (s.getRole() != UserRole.STAFF) throw new SecurityException("Staff only");
         if (updated == null) throw new IllegalArgumentException("Missing employee data");
 
-        // ✅ UserSession has getUserId()
+
         if (!s.getUserId().equals(updated.getEmployeeId()))
             throw new SecurityException("Cannot update other users");
 
@@ -169,7 +169,7 @@ public class ServiceImpl extends UnicastRemoteObject implements Authorization {
             Employee basic = employees.findBasic(s.getUserId());
             if (basic == null) throw new IllegalStateException("Employee not found");
 
-            // fetch details row
+
             EmployeeDetailsRepository.DetailsRow d = details.find(s.getUserId());
             if (d != null) {
                 basic.setPhoneNo(d.phone);
@@ -362,7 +362,7 @@ public class ServiceImpl extends UnicastRemoteObject implements Authorization {
                 if (row.daysRequested > bal) {
                     throw new IllegalStateException("Cannot approve: insufficient balance. Balance=" + bal);
                 }
-                // deduct
+    
                 leaveBalanceRepo.setBalance(row.employeeId, year, bal - row.daysRequested);
                 leaveRepo.setDecision(leaveId, "APPROVED", s.getUserId());
                 audit.log("decideLeave APPROVED: leaveId=" + leaveId + " by=" + s.getUserId());
@@ -388,7 +388,7 @@ public class ServiceImpl extends UnicastRemoteObject implements Authorization {
             if (year < 2000 || year > 2100)
                 throw new IllegalArgumentException("Invalid year");
 
-            // Ensure employee exists
+
             Employee basic = employees.findBasic(employeeId.trim());
             if (basic == null) return "Employee not found: " + employeeId;
 

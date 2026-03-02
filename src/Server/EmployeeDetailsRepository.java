@@ -27,7 +27,7 @@ public class EmployeeDetailsRepository {
     }
 
     public void updateFromEmployee(Employee e) throws SQLException {
-        // Ensure row exists
+        
         createIfNotExists(e.getEmployeeId());
 
         String sql = "UPDATE EMPLOYEE_DETAILS " +
