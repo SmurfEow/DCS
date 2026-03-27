@@ -301,33 +301,48 @@ public class ClientMain {
                             System.out.print("Start Date (YYYY-MM-DD): ");
                             String start = sc.nextLine().trim();
 
-                            System.out.print("End Date (YYYY-MM-DD): ");
-                            String end = sc.nextLine().trim();
+                            System.out.print("Number of Leave Days: ");
+                            String daysInput = sc.nextLine().trim();
 
                             System.out.print("Reason: ");
                             String reason = sc.nextLine().trim();
 
                             try {
                                 java.time.LocalDate sDate = java.time.LocalDate.parse(start);
-                                java.time.LocalDate eDate = java.time.LocalDate.parse(end);
-
-                                if (eDate.isBefore(sDate)) {
-                                    System.out.println(" End date must be after or same as start date.");
-                                    continue;
-                                }
+                                int requestedDays = Integer.parseInt(daysInput);
 
                                 if (sDate.isBefore(java.time.LocalDate.now())) {
                                     System.out.println(" Start date cannot be in the past.");
                                     continue;
                                 }
 
-                                long days = java.time.temporal.ChronoUnit.DAYS.between(sDate, eDate) + 1;
+                                if (requestedDays <= 0) {
+                                    System.out.println(" Leave days must be at least 1.");
+                                    continue;
+                                }
+
+                                int availableBalance = service.leaveBalance(session);
+                                int remainingBalance = "ANNUAL".equalsIgnoreCase(type)
+                                        ? availableBalance - requestedDays
+                                        : availableBalance;
+                                java.time.LocalDate eDate = sDate.plusDays(requestedDays - 1L);
+
+                                if ("ANNUAL".equalsIgnoreCase(type) && remainingBalance < 0) {
+                                    System.out.println(" Requested days exceed available annual leave balance.");
+                                    System.out.println(" Available Balance : " + availableBalance + " day(s)");
+                                    System.out.println(" Requested Days    : " + requestedDays + " day(s)");
+                                    continue;
+                                }
+
+                                System.out.println(" Remaining Leave Days: " + remainingBalance + " day(s)");
 
                                 System.out.println("\n=== CONFIRM LEAVE ===");
                                 System.out.println("Type  : " + type);
                                 System.out.println("From  : " + sDate);
                                 System.out.println("To    : " + eDate);
-                                System.out.println("Days  : " + days);
+                                System.out.println("Days  : " + requestedDays);
+                                System.out.println("Available Balance : " + availableBalance + " day(s)");
+                                System.out.println("Remaining Balance : " + remainingBalance + " day(s)");
                                 System.out.println("Reason: " + reason);
                                 System.out.print("Confirm submit? (Y/N): ");
 
@@ -337,12 +352,15 @@ public class ClientMain {
                                     return session;
                                 }
 
+                                String end = eDate.toString();
                                 int leaveId = service.applyLeave(session, type, start, end, reason);
                                 System.out.println(" Leave submitted. ID: " + leaveId + " (Status: PENDING)");
                                 return session;
 
+                            } catch (NumberFormatException ex) {
+                                System.out.println(" Invalid leave days. Enter a whole number such as 3.");
                             } catch (Exception ex) {
-                                System.out.println(" Invalid date format. Use YYYY-MM-DD (example: 2026-03-10).");
+                                System.out.println(" Invalid input. Use YYYY-MM-DD for the start date and a valid number of leave days.");
                             }
                         }
                     }
